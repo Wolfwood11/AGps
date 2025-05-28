@@ -1,16 +1,15 @@
 #include <HardwareSerial.h>
 #include <TinyGPSPlus.h>
 #include <U8g2lib.h>
-#include <BluetoothSerial.h>
 #include <Preferences.h>
 #include <math.h>
 
 #include "Structs.h"
 #include "MathUtils.h"
 #include "GpsController.h"
+#include "BtController.h"
 #include "Subscription.h"
 
-// --- GPS ---
 #ifdef USE_GPS_HARDWARE
 #define GPS_RX 25
 #define GPS_TX 26
@@ -20,18 +19,15 @@ GpsController gpsController(gpsSerial, GPS_RX, GPS_TX);
 GpsController gpsController(Serial);
 #endif
 
-BluetoothSerial SerialBT;
+BtController btController(gpsController.nmeaRaw);
 Preferences prefs;
 
 U8G2_SH1106_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE);
-
-String btCommand;
 
 GpsData latestGpsData;
 FullNmeaTime latestNmeaTime;
 bool gpsDataUpdated = false;
 SubscriptionHolder gpsSubHolder;
-SubscriptionHolder gpsNmeaHolder;
 
 unsigned long lastLapTime = 0;
 unsigned long bestLapTime = 0;
@@ -72,47 +68,6 @@ void displayTimeRow(const char* prefix, unsigned long ms, int y_pos) {
   u8g2.print(prefix); u8g2.print(buf);
 }
 
-void handleBluetoothCommands() {
-  while (SerialBT.available()) {
-    char c = SerialBT.read();
-    if (c == '\n' || c == '\r') {
-      if (btCommand.length() > 0) {
-        btCommand.trim();
-        if (btCommand == "SETMODE TRACK") {
-          currentState = STATE_WAIT_LAP_START;
-          lapStarted = false;
-          prevFixNmeaTime_G_isValid = false;
-          SerialBT.println("ACK: MODE TRACK");
-        } else if (btCommand == "SETMODE SPD") {
-          currentState = STATE_SPEEDOMETER;
-          SerialBT.println("ACK: MODE SPD");
-        } else if (btCommand == "RESET PB") {
-          prefs.begin("lapdata", false);
-          prefs.putULong("bestLap", 0);
-          prefs.end();
-          storedBestLap = 0;
-          bestLapTime = 0;
-          SerialBT.println("ACK: PB RESET");
-        } else if (btCommand.startsWith("SET PB ")) {
-          unsigned long newPB = btCommand.substring(7).toInt();
-          if (newPB > 0) {
-            storedBestLap = newPB;
-            prefs.begin("lapdata", true);
-            prefs.putULong("bestLap", storedBestLap);
-            prefs.end();
-            SerialBT.print("ACK: PB SET TO "); SerialBT.println(storedBestLap);
-          } else SerialBT.println("ERR: INVALID PB VALUE");
-        } else {
-          SerialBT.print("ERR: UNKNOWN CMD "); SerialBT.println(btCommand);
-        }
-        btCommand = "";
-      }
-    } else if (btCommand.length() < 50) {
-      btCommand += c;
-    }
-  }
-}
-
 void setup() {
   Serial.begin(115200);
   gpsController.setup();
@@ -120,11 +75,38 @@ void setup() {
     latestGpsData = data;
     gpsDataUpdated = true;
   }, gpsSubHolder);
-  gpsController.nmeaRaw->Subscribe([&](const String& line) {
-    if (SerialBT.hasClient()) SerialBT.print(line);
-  }, gpsNmeaHolder);
 
-  SerialBT.begin("ESP32_GPS");
+  btController.setup();
+  btController.command->Subscribe([&](const String& cmd) {
+    if (cmd == "SETMODE TRACK") {
+      currentState = STATE_WAIT_LAP_START;
+      lapStarted = false;
+      prevFixNmeaTime_G_isValid = false;
+      btController.sendResponse("ACK: MODE TRACK");
+    } else if (cmd == "SETMODE SPD") {
+      currentState = STATE_SPEEDOMETER;
+      btController.sendResponse("ACK: MODE SPD");
+    } else if (cmd == "RESET PB") {
+      prefs.begin("lapdata", false);
+      prefs.putULong("bestLap", 0);
+      prefs.end();
+      storedBestLap = 0;
+      bestLapTime = 0;
+      btController.sendResponse("ACK: PB RESET");
+    } else if (cmd.startsWith("SET PB ")) {
+      unsigned long newPB = cmd.substring(7).toInt();
+      if (newPB > 0) {
+        storedBestLap = newPB;
+        prefs.begin("lapdata", true);
+        prefs.putULong("bestLap", storedBestLap);
+        prefs.end();
+        btController.sendResponse("ACK: PB SET TO " + String(storedBestLap));
+      } else btController.sendResponse("ERR: INVALID PB VALUE");
+    } else {
+      btController.sendResponse("ERR: UNKNOWN CMD " + cmd);
+    }
+  }, gpsSubHolder);
+
   u8g2.begin();
   u8g2.enableUTF8Print();
   u8g2.setFont(u8g2_font_logisoso20_tf);
@@ -141,16 +123,15 @@ void setup() {
 }
 
 void loop() {
+  
   gpsController.loop(millis());
-  handleBluetoothCommands();
-
+  btController.loop(millis());
   unsigned long now = millis();
   bool gpsOk = latestGpsData.locationValid && (now - latestGpsData.millisReceived <= MathUtils::gpsTimeoutMs);
 
   double lat = latestGpsData.latitude;
   double lon = latestGpsData.longitude;
   int sats = latestGpsData.satellites;
-
   FullNmeaTime curTime = latestGpsData.nmeaTime;
   bool nmeaValid = curTime.isValid;
 
@@ -172,7 +153,7 @@ void loop() {
       u8g2.setFont(u8g2_font_helvR10_tr);
       u8g2.setCursor(0, 12); u8g2.print("WAITING FOR GPS");
       u8g2.setCursor(0, 28); u8g2.print("Sats: "); u8g2.print(sats);
-      u8g2.setCursor(0, 44); u8g2.print("BT: "); SerialBT.hasClient() ? u8g2.print("Connected") : u8g2.print("Waiting...");
+      u8g2.setCursor(0, 44); u8g2.print("BT: "); u8g2.print(btController.isConnected() ? "Connected" : "Waiting...");
       break;
 
     case STATE_SPEEDOMETER:
