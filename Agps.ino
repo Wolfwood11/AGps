@@ -10,6 +10,7 @@
 #include "GpsController.h"
 #include "Subscription.h"
 
+// --- GPS ---
 #ifdef USE_GPS_HARDWARE
 #define GPS_RX 25
 #define GPS_TX 26
@@ -46,8 +47,8 @@ double prevLon = 0.0;
 
 TrapLine trapLines[] = {
   {"Start/Finish", 52.444978239573054, 20.639983209455288,
-                    52.44479509375817, 20.640014790479068,
-                    0, 0, 0, 0, 264.0 }
+                   52.44479509375817, 20.640014790479068,
+                   0, 0, 0, 0, 264.0 }
 };
 const int numTraps = sizeof(trapLines) / sizeof(TrapLine);
 
@@ -118,7 +119,6 @@ void setup() {
   gpsController.gpsProcessed->Subscribe([&](const GpsData& data) {
     latestGpsData = data;
     gpsDataUpdated = true;
-    latestNmeaTime = data.nmeaTime;
   }, gpsSubHolder);
   gpsController.nmeaRaw->Subscribe([&](const String& line) {
     if (SerialBT.hasClient()) SerialBT.print(line);
@@ -131,6 +131,7 @@ void setup() {
 
   prefs.begin("lapdata", false);
   storedBestLap = prefs.getULong("bestLap", 0);
+  bestLapTime = storedBestLap;
   prefs.end();
 
   for (int i = 0; i < numTraps; ++i) {
@@ -146,16 +147,24 @@ void loop() {
   unsigned long now = millis();
   bool gpsOk = latestGpsData.locationValid && (now - latestGpsData.millisReceived <= MathUtils::gpsTimeoutMs);
 
+  double lat = latestGpsData.latitude;
+  double lon = latestGpsData.longitude;
+  int sats = latestGpsData.satellites;
+
+  FullNmeaTime curTime = latestGpsData.nmeaTime;
+  bool nmeaValid = curTime.isValid;
+
+  if (currentState == STATE_WAIT_GPS && gpsOk && sats >= 4 && nmeaValid) {
+    currentState = STATE_WAIT_LAP_START;
+    Serial.println("WAIT LAP");
+  }
+
   if (!gpsOk) {
     currentState = STATE_WAIT_GPS;
     prevFixNmeaTime_G_isValid = false;
     lapStarted = false;
+    Serial.println("!gpsOk");
   }
-
-  double lat = latestGpsData.latitude;
-  double lon = latestGpsData.longitude;
-  int sats = latestGpsData.satellites;
-  bool nmeaValid = latestNmeaTime.isValid;
 
   u8g2.clearBuffer();
   switch (currentState) {
@@ -164,7 +173,6 @@ void loop() {
       u8g2.setCursor(0, 12); u8g2.print("WAITING FOR GPS");
       u8g2.setCursor(0, 28); u8g2.print("Sats: "); u8g2.print(sats);
       u8g2.setCursor(0, 44); u8g2.print("BT: "); SerialBT.hasClient() ? u8g2.print("Connected") : u8g2.print("Waiting...");
-      if (gpsOk && sats >= 4 && nmeaValid) currentState = STATE_WAIT_LAP_START;
       break;
 
     case STATE_SPEEDOMETER:
@@ -180,16 +188,18 @@ void loop() {
       if (!gpsOk || !nmeaValid) break;
       double tRatio;
       if (prevFixNmeaTime_G_isValid && MathUtils::crossedLineInterpolated(prevLat, prevLon, lat, lon, trapLines[0], tRatio)) {
-        long dt = MathUtils::calculate_nmea_fix_interval_ms(latestNmeaTime, prevFixNmeaTime_G);
+        Serial.println("crossedLineInterpolated ");
+        long dt = MathUtils::calculate_nmea_fix_interval_ms(curTime, prevFixNmeaTime_G);
         if (dt >= 10 && dt <= 1000) {
           FullNmeaTime crossTime = MathUtils::add_ms_to_nmea_time(prevFixNmeaTime_G, long(tRatio * dt));
           if (currentState == STATE_WAIT_LAP_START) {
             lapStartNmeaTime_G = crossTime;
             lapStartNmeaTime_G.isValid = true;
             lapStarted = true;
+              Serial.println("STATE_TRACKING 1");
             currentState = STATE_TRACKING;
           } else if (currentState == STATE_TRACKING) {
-            unsigned long lapTime = lapStartNmeaTime_G.isValid ? MathUtils::calculate_lap_duration_ms(crossTime, lapStartNmeaTime_G) : 0;
+            unsigned long lapTime = MathUtils::calculate_lap_duration_ms(crossTime, lapStartNmeaTime_G);
             if (lapTime >= MathUtils::minLapTimeMs) {
               lastLapTime = lapTime;
               if (bestLapTime == 0 || lapTime < bestLapTime) {
@@ -206,18 +216,32 @@ void loop() {
           }
         }
       }
-      u8g2.setFont(u8g2_font_logisoso22_tf);
-      displayTimeRow("L ", lastLapTime, 30);
-      displayTimeRow("B ", bestLapTime > 0 ? bestLapTime : storedBestLap, 60);
+
+      if (currentState == STATE_WAIT_LAP_START) {
+          u8g2.setFont(u8g2_font_helvR10_tr);
+          u8g2.setCursor(0, 12); u8g2.println("READY TO START LAP");
+          displayTimeRow("PB: ", storedBestLap, 30);
+          u8g2.setCursor(0, 48); u8g2.print("SAT: "); u8g2.print(sats);
+      } else if (currentState == STATE_TRACKING) {
+        u8g2.setFont(u8g2_font_logisoso22_tf);
+        if (lapStartNmeaTime_G.isValid && gpsOk && nmeaValid) {
+          unsigned long lapTime = MathUtils::calculate_lap_duration_ms(curTime, lapStartNmeaTime_G);
+          displayTimeRow("L ", lapTime, 30);
+        } else {
+          displayTimeRow("L ", 0, 30);
+        }
+        displayTimeRow("B ", bestLapTime > 0 ? bestLapTime : storedBestLap, 60);
+      }
       break;
     }
   }
+
   u8g2.sendBuffer();
 
   if (gpsOk && nmeaValid) {
     prevLat = lat;
     prevLon = lon;
-    prevFixNmeaTime_G = latestNmeaTime;
+    prevFixNmeaTime_G = curTime;
     prevFixNmeaTime_G_isValid = true;
   }
 }
