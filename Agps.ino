@@ -1,14 +1,22 @@
 #include <HardwareSerial.h>
 #include <TinyGPSPlus.h>
-#include <U8g2lib.h>
 #include <Preferences.h>
 #include <math.h>
+#include <memory>
 
 #include "Structs.h"
 #include "MathUtils.h"
 #include "GpsController.h"
 #include "BtController.h"
 #include "Subscription.h"
+#include "Binding.h"
+#include "IUiPage.h"
+#include "DisplayController.h"
+#include "GlobalMsg.h"
+#include "TrackingPage.h"
+#include "WaitLapStartPage.h"
+#include "SpeedPage.h" 
+#include "WaitGpsPage.h" 
 
 #ifdef USE_GPS_HARDWARE
 #define GPS_RX 25
@@ -22,10 +30,8 @@ GpsController gpsController(Serial);
 BtController btController(gpsController.nmeaRaw);
 Preferences prefs;
 
-U8G2_SH1106_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE);
-
+// --- Глобальные переменные ---
 GpsData latestGpsData;
-FullNmeaTime latestNmeaTime;
 bool gpsDataUpdated = false;
 SubscriptionHolder gpsSubHolder;
 
@@ -56,17 +62,21 @@ enum TrackerState {
 };
 TrackerState currentState = STATE_WAIT_GPS;
 
-void displayTimeRow(const char* prefix, unsigned long ms, int y_pos) {
-  char buf[20];
-  if (ms == 0 && bestLapTime != 0 && strcmp(prefix, "L ") == 0)
-    sprintf(buf, "--:--:--");
-  else if (ms == 0 && strcmp(prefix, "B ") == 0 && storedBestLap == 0)
-    sprintf(buf, "--:--:--");
-  else
-    sprintf(buf, "%lu:%02lu:%02lu", ms / 60000, (ms / 1000) % 60, (ms % 1000) / 10);
-  u8g2.setCursor(0, y_pos);
-  u8g2.print(prefix); u8g2.print(buf);
-}
+// --- UI ---
+// Пример PageId:
+constexpr int PAGE_WAIT_GPS      = 1;
+constexpr int PAGE_SPEEDOMETER   = 2;
+constexpr int PAGE_WAIT_LAP      = 3;
+constexpr int PAGE_TRACKING      = 4;
+
+U8G2_SH1106_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE);
+DisplayController display(u8g2);
+
+// Создаем страницы через std::shared_ptr
+auto waitGpsPage     = std::make_shared<WaitGpsPage>();
+auto speedPage       = std::make_shared<SpeedPage>();
+auto waitLapPage     = std::make_shared<WaitLapStartPage>();
+auto trackingPage    = std::make_shared<TrackingPage>();
 
 void setup() {
   Serial.begin(115200);
@@ -83,9 +93,11 @@ void setup() {
       lapStarted = false;
       prevFixNmeaTime_G_isValid = false;
       btController.sendResponse("ACK: MODE TRACK");
+      GlobalMsg::Broadcast(PAGE_WAIT_LAP);
     } else if (cmd == "SETMODE SPD") {
       currentState = STATE_SPEEDOMETER;
       btController.sendResponse("ACK: MODE SPD");
+      GlobalMsg::Broadcast(PAGE_SPEEDOMETER);
     } else if (cmd == "RESET PB") {
       prefs.begin("lapdata", false);
       prefs.putULong("bestLap", 0);
@@ -120,10 +132,33 @@ void setup() {
     MathUtils::latLonToMeters(trapLines[i].lat1, trapLines[i].lon1, trapLines[i].x1, trapLines[i].y1);
     MathUtils::latLonToMeters(trapLines[i].lat2, trapLines[i].lon2, trapLines[i].x2, trapLines[i].y2);
   }
+
+  // --- Привязка биндингов к страницам ---
+  waitGpsPage->satellites = [&]() { return latestGpsData.satellites; };
+  waitGpsPage->btConnected = [&]() { return btController.isConnected(); };
+
+  speedPage->speedKmph = [&]() { return latestGpsData.speedKmph; };
+  speedPage->satellites = [&]() { return latestGpsData.satellites; };
+
+  waitLapPage->pb = [&]() { return storedBestLap; };
+  waitLapPage->satellites = [&]() { return latestGpsData.satellites; };
+
+  trackingPage->lapTime = [&]() { return (lapStartNmeaTime_G.isValid && latestGpsData.nmeaTime.isValid)
+        ? MathUtils::calculate_lap_duration_ms(latestGpsData.nmeaTime, lapStartNmeaTime_G)
+        : 0; };
+  trackingPage->bestLapTime = [&]() { return bestLapTime; };
+  trackingPage->storedBestLap = [&]() { return storedBestLap; };
+
+  // --- Регистрируем страницы ---
+  display.registerPage(PAGE_WAIT_GPS, waitGpsPage);
+  display.registerPage(PAGE_SPEEDOMETER, speedPage);
+  display.registerPage(PAGE_WAIT_LAP, waitLapPage);
+  display.registerPage(PAGE_TRACKING, trackingPage);
+
+  GlobalMsg::Broadcast(PAGE_WAIT_LAP);
 }
 
 void loop() {
-  
   gpsController.loop(millis());
   btController.loop(millis());
   unsigned long now = millis();
@@ -135,40 +170,28 @@ void loop() {
   FullNmeaTime curTime = latestGpsData.nmeaTime;
   bool nmeaValid = curTime.isValid;
 
+  // State transitions
   if (currentState == STATE_WAIT_GPS && gpsOk && sats >= 4 && nmeaValid) {
     currentState = STATE_WAIT_LAP_START;
     Serial.println("WAIT LAP");
+    GlobalMsg::Broadcast(PAGE_WAIT_LAP);
   }
-
   if (!gpsOk) {
     currentState = STATE_WAIT_GPS;
     prevFixNmeaTime_G_isValid = false;
     lapStarted = false;
     Serial.println("!gpsOk");
+    GlobalMsg::Broadcast(PAGE_WAIT_GPS);
   }
 
-  u8g2.clearBuffer();
+  // Основная логика круга
   switch (currentState) {
-    case STATE_WAIT_GPS:
-      u8g2.setFont(u8g2_font_helvR10_tr);
-      u8g2.setCursor(0, 12); u8g2.print("WAITING FOR GPS");
-      u8g2.setCursor(0, 28); u8g2.print("Sats: "); u8g2.print(sats);
-      u8g2.setCursor(0, 44); u8g2.print("BT: "); u8g2.print(btController.isConnected() ? "Connected" : "Waiting...");
-      break;
-
-    case STATE_SPEEDOMETER:
-      u8g2.setFont(u8g2_font_logisoso20_tf);
-      u8g2.setCursor(0, 28);
-      u8g2.print(gpsOk ? String(latestGpsData.speedKmph, 1) + " km/h" : "--.- km/h");
-      u8g2.setFont(u8g2_font_helvR08_tr);
-      u8g2.setCursor(0, 50); u8g2.print("SAT: "); u8g2.print(sats);
-      break;
-
     case STATE_WAIT_LAP_START:
     case STATE_TRACKING: {
       if (!gpsOk || !nmeaValid) break;
       double tRatio;
-      if (prevFixNmeaTime_G_isValid && MathUtils::crossedLineInterpolated(prevLat, prevLon, lat, lon, trapLines[0], tRatio)) {
+      if (prevFixNmeaTime_G_isValid &&
+          MathUtils::crossedLineInterpolated(prevLat, prevLon, lat, lon, trapLines[0], tRatio)) {
         Serial.println("crossedLineInterpolated ");
         long dt = MathUtils::calculate_nmea_fix_interval_ms(curTime, prevFixNmeaTime_G);
         if (dt >= 10 && dt <= 1000) {
@@ -177,8 +200,9 @@ void loop() {
             lapStartNmeaTime_G = crossTime;
             lapStartNmeaTime_G.isValid = true;
             lapStarted = true;
-              Serial.println("STATE_TRACKING 1");
+            Serial.println("STATE_TRACKING 1");
             currentState = STATE_TRACKING;
+            GlobalMsg::Broadcast(PAGE_TRACKING);
           } else if (currentState == STATE_TRACKING) {
             unsigned long lapTime = MathUtils::calculate_lap_duration_ms(crossTime, lapStartNmeaTime_G);
             if (lapTime >= MathUtils::minLapTimeMs) {
@@ -197,28 +221,13 @@ void loop() {
           }
         }
       }
-
-      if (currentState == STATE_WAIT_LAP_START) {
-          u8g2.setFont(u8g2_font_helvR10_tr);
-          u8g2.setCursor(0, 12); u8g2.println("READY TO START LAP");
-          displayTimeRow("PB: ", storedBestLap, 30);
-          u8g2.setCursor(0, 48); u8g2.print("SAT: "); u8g2.print(sats);
-      } else if (currentState == STATE_TRACKING) {
-        u8g2.setFont(u8g2_font_logisoso22_tf);
-        if (lapStartNmeaTime_G.isValid && gpsOk && nmeaValid) {
-          unsigned long lapTime = MathUtils::calculate_lap_duration_ms(curTime, lapStartNmeaTime_G);
-          displayTimeRow("L ", lapTime, 30);
-        } else {
-          displayTimeRow("L ", 0, 30);
-        }
-        displayTimeRow("B ", bestLapTime > 0 ? bestLapTime : storedBestLap, 60);
-      }
       break;
     }
   }
 
-  u8g2.sendBuffer();
+  display.loop(millis());
 
+  // --- Сохраняем предыдущие значения для интерполяции ---
   if (gpsOk && nmeaValid) {
     prevLat = lat;
     prevLon = lon;
