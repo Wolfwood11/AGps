@@ -1,4 +1,5 @@
 #pragma once
+
 #include <TinyGPSPlus.h>
 
 struct TrapLine {
@@ -56,4 +57,20 @@ struct FullNmeaTime {
             return 0;
         return hour * 3600000L + minute * 60000L + second * 1000L + hundredths * 10L;
     }
+};
+
+struct GpsData {
+    double latitude;
+    double longitude;
+    double speedKmph;
+    double hdop;
+    int satellites;
+    bool locationValid;
+    bool speedValid;
+    bool hdopValid;
+    unsigned long msOfDay;
+
+    // Добавляемые поля:
+    unsigned long millisReceived;     // millis() во время получения фикса
+    FullNmeaTime nmeaTime;  
 };
