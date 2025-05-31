@@ -1,28 +1,36 @@
 #include "BtController.h"
 
-BtController::BtController(std::shared_ptr<Subscription<String>> nmeaSource) {
-   if (nmeaSource) {
+#include <DisplayFacade.h>
+
+BtController::BtController(std::shared_ptr<Subscription<String>> nmeaSource)
+{
+    if (nmeaSource) {
         nmeaSource->Subscribe([this](const String& line) {
             this->sendNmeaLine(line);
-        }, nmeaHolder);
+        },
+            nmeaHolder);
     }
 }
 
-void BtController::sendResponse(const String& msg) {
+void BtController::sendResponse(const String& msg)
+{
     if (btSerial.hasClient()) {
         btSerial.println(msg);
     }
 }
 
-bool BtController::isConnected() {
+bool BtController::isConnected()
+{
     return btSerial.hasClient();
 }
 
-void BtController::setup() {
+void BtController::setup()
+{
     btSerial.begin("ESP32_GPS");
 }
 
-void BtController::loop(unsigned long) {
+void BtController::loop(unsigned long)
+{
     while (btSerial.available()) {
         char c = btSerial.read();
         if (c == '\n' || c == '\r') {
@@ -37,9 +45,12 @@ void BtController::loop(unsigned long) {
             buffer += c;
         }
     }
+    auto& display = DisplayFacade::instance();
+    display.setBtConnected(isConnected());
 }
 
-void BtController::sendNmeaLine(const String& line) {
+void BtController::sendNmeaLine(const String& line)
+{
     if (btSerial.hasClient()) {
         btSerial.print(line);
     }
