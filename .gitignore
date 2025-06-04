@@ -1,5 +1,12 @@
-﻿__vm
+__vm
 .vs
 *.sln
 *.vcxproj
 *.filters
+# Android build artifacts
+**/build/
+**/.gradle/
+# Gradle wrapper files except in version control
+**/gradle/
+**/gradlew
+**/gradlew.bat
