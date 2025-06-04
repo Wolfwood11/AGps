@@ -38,7 +38,7 @@ void setup()
     display.setup();
 
     // --- Логика ---
-    logic = std::make_unique<LogicController>(gpsController.gpsProcessed, btController.command, prefs);
+    logic = std::make_unique<LogicController>(gpsController.gpsProcessed, btController.command, wifiController, prefs);
     if (logic) {
         logic->setup();
     }

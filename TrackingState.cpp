@@ -25,7 +25,8 @@ void TrackingState::loop(unsigned long) {
         if (dt >= 10 && dt <= 1000) {
             FullNmeaTime crossTime = MathUtils::add_ms_to_nmea_time(lc.prevFixNmeaTime_G, long(tRatio * dt));
             unsigned long lapTime = MathUtils::calculate_lap_duration_ms(crossTime, lc.lapStartNmeaTime_G);
-            if (lapTime >= MathUtils::minLapTimeMs) {
+            if (lapTime >= MathUtils::minLapTimeMs &&
+                millis() - MathUtils::lastCrossMillis >= MathUtils::minLapTimeMs / 4) {
                 lc.lastLapTime = lapTime;
                 if (lc.bestLapTime == 0 || lapTime < lc.bestLapTime) {
                     lc.bestLapTime = lapTime;
@@ -37,6 +38,7 @@ void TrackingState::loop(unsigned long) {
                     }
                 }
                 lc.lapStartNmeaTime_G = crossTime;
+                MathUtils::lastCrossMillis = millis();
             }
         }
     }

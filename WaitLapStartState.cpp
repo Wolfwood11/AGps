@@ -5,6 +5,7 @@
 #include <Logger.h>
 #include <LogicController.h>
 #include <MathUtils.h>
+#include <NetwrokMsg.h>
 
 void WaitLapStartState::enter()
 {
@@ -30,11 +31,15 @@ void WaitLapStartState::loop(unsigned long)
         Logger::log("loop crossedLineInterpolated");
         long dt = MathUtils::calculate_nmea_fix_interval_ms(data.nmeaTime, lc.prevFixNmeaTime_G);
         if (dt >= 10 && dt <= 1000) {
-            lc.lapStartNmeaTime_G = MathUtils::add_ms_to_nmea_time(lc.prevFixNmeaTime_G, long(tRatio * dt));
-            lc.lapStartNmeaTime_G.isValid = true;
-            lc.lapStarted = true;
-            Logger::log("loop LOGIC_TRACKING");
-            stateMachine.setState(LOGIC_TRACKING);
+            if (millis() - MathUtils::lastCrossMillis >= MathUtils::minLapTimeMs / 4) {
+                lc.lapStartNmeaTime_G = MathUtils::add_ms_to_nmea_time(lc.prevFixNmeaTime_G, long(tRatio * dt));
+                lc.lapStartNmeaTime_G.isValid = true;
+                lc.lapStarted = true;
+                MathUtils::lastCrossMillis = millis();
+                lc.sendSessionStartMessage();
+                Logger::log("loop LOGIC_TRACKING");
+                stateMachine.setState(LOGIC_TRACKING);
+            }
         }
     }
 }
