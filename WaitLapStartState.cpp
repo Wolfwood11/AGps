@@ -5,6 +5,7 @@
 #include <Logger.h>
 #include <LogicController.h>
 #include <MathUtils.h>
+#include <NetwrokMsg.h>
 
 void WaitLapStartState::enter()
 {
@@ -35,6 +36,7 @@ void WaitLapStartState::loop(unsigned long)
                 lc.lapStartNmeaTime_G.isValid = true;
                 lc.lapStarted = true;
                 MathUtils::lastCrossMillis = millis();
+                lc.sendSessionStartMessage();
                 Logger::log("loop LOGIC_TRACKING");
                 stateMachine.setState(LOGIC_TRACKING);
             }

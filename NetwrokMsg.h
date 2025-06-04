@@ -7,6 +7,7 @@ enum class UdpMessageType : unsigned int {
     ERROR = 0,
     Geo = 1,
     Control = 2,
+    SessionStart = 3,
 };
 
 class BaseUdpMessage {
@@ -29,5 +30,18 @@ public:
     UdpGeoMessage() { messageType = UdpMessageType::Geo; }
     size_t Size() override { return sizeof(UdpGeoMessage); }
     char nmea[128] = { 0 };
+};
+
+class UdpControlMessage : public BaseUdpMessage {
+public:
+    UdpControlMessage() { messageType = UdpMessageType::Control; }
+    size_t Size() override { return sizeof(UdpControlMessage); }
+    char command[64] = { 0 };
+};
+
+class UdpSessionStartMessage : public BaseUdpMessage {
+public:
+    UdpSessionStartMessage() { messageType = UdpMessageType::SessionStart; }
+    size_t Size() override { return sizeof(UdpSessionStartMessage); }
 };
 #endif

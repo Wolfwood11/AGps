@@ -13,8 +13,10 @@
 LogicController::LogicController(
     const std::shared_ptr<Subscription<GpsData>>& gpsProcessed,
     const std::shared_ptr<Subscription<String>>& btCommand,
+    WiFiUdpController& wifiCtrl,
     Preferences& pref)
     : prefs(pref)
+    , wifi(&wifiCtrl)
 {
     if (gpsProcessed) {
         gpsProcessed->Subscribe([this](const GpsData& data) {
@@ -30,6 +32,16 @@ LogicController::LogicController(
             btCommandHolder);
     }
 
+    if (wifi) {
+        wifi->SubscribeOnDataReceive(UdpMessageType::Control,
+            [this](const BaseUdpMessage& msg) {
+                const UdpControlMessage& cmsg =
+                    reinterpret_cast<const UdpControlMessage&>(msg);
+                onBtCommand(String(cmsg.command));
+            },
+            wifiHolder);
+    }
+
     for (int i = 0; i < numTraps; ++i) {
         MathUtils::latLonToMeters(trapLines[i].lat1, trapLines[i].lon1, trapLines[i].x1, trapLines[i].y1);
         MathUtils::latLonToMeters(trapLines[i].lat2, trapLines[i].lon2, trapLines[i].x2, trapLines[i].y2);
@@ -40,6 +52,7 @@ LogicController::~LogicController()
 {
     gpsHolder.reset();
     btCommandHolder.reset();
+    wifiHolder.reset();
 }
 
 void LogicController::setup()
@@ -114,6 +127,10 @@ void LogicController::onBtCommand(const String& cmd)
         prefs.end();
         storedBestLap = 0;
         bestLapTime = 0;
+    } else if (cmd == "START SESSION") {
+        stateMachine.setState(LOGIC_WAIT_LAP_START);
+        lapStarted = false;
+        prevFixNmeaTime_G_isValid = false;
     } else if (cmd.startsWith("SET PB ")) {
         unsigned long newPB = cmd.substring(7).toInt();
         if (newPB > 0) {
@@ -122,5 +139,14 @@ void LogicController::onBtCommand(const String& cmd)
             prefs.putULong("bestLap", storedBestLap);
             prefs.end();
         }
+    }
+}
+
+void LogicController::sendSessionStartMessage()
+{
+    if (wifi) {
+        UdpSessionStartMessage msg;
+        msg.timestamp = millis();
+        wifi->SendMessage(msg, msg.Size());
     }
 }

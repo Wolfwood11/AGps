@@ -5,6 +5,7 @@
 #include <Enums.h>
 #include <ObjectStateMachine.h>
 #include <Preferences.h>
+#include <WiFiUdpController.h>
 #include <Structs.h>
 #include <memory>
 
@@ -18,6 +19,7 @@ class LogicController : public BaseController {
 public:
     LogicController(const std::shared_ptr<Subscription<GpsData>>& gpsProcessed,
         const std::shared_ptr<Subscription<String>>& btCommand,
+        WiFiUdpController& wifiCtrl,
         Preferences& pref);
     ~LogicController() override;
 
@@ -26,9 +28,12 @@ public:
     void loop(unsigned long dt) override;
     void onGpsUpdate(const GpsData& data);
     void onBtCommand(const String& cmd);
+    void sendSessionStartMessage();
 
     SubscriptionHolder gpsHolder;
     SubscriptionHolder btCommandHolder;
+    SubscriptionHolder wifiHolder;
+    WiFiUdpController* wifi;
     // --- Доступ к данным для стейтов ---
     Preferences& prefs;
 
