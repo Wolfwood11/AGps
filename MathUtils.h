@@ -1,6 +1,7 @@
-// MathUtils.h
-#pragma once
-#include "Structs.h"
+#ifndef MathUtils_H
+#define MathUtils_H
+
+#include <Structs.h>
 #include <TinyGPSPlus.h>
 #include <cmath>
 
@@ -189,3 +190,4 @@ public:
         return true;
     }
 };
+#endif

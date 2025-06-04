@@ -1,12 +1,14 @@
-#include "LogicController.h"
+#include <LogicController.h>
 
-#include "DisplayFacade.h"
-#include "GlobalMsg.h"
-#include "Logger.h"
-#include "SpeedometerState.h"
-#include "TrackingState.h"
-#include "WaitGpsState.h"
-#include "WaitLapStartState.h"
+#include <MathUtils.h>
+
+#include <DisplayFacade.h>
+#include <GlobalMsg.h>
+#include <Logger.h>
+#include <SpeedometerState.h>
+#include <TrackingState.h>
+#include <WaitGpsState.h>
+#include <WaitLapStartState.h>
 
 LogicController::LogicController(
     const std::shared_ptr<Subscription<GpsData>>& gpsProcessed,

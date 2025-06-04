@@ -1,10 +1,11 @@
-#pragma once
+#ifndef GpsController_H
+#define GpsController_H
 
-#include "BaseController.h"
-#include "Subscription.h"
+#include <BaseController.h>
 #include <HardwareSerial.h>
+#include <Structs.h>
+#include <Subscription.h>
 #include <TinyGPSPlus.h>
-#include "Structs.h"
 
 class GpsController : public BaseController {
 public:
@@ -24,3 +25,4 @@ private:
 
     void sendUBX(const uint8_t* data, size_t len, unsigned long delayMs = 100);
 };
+#endif

@@ -1,9 +1,9 @@
 // TrackingState.cpp
-#include "TrackingState.h"
-#include "LogicController.h"
-#include "MathUtils.h"
-#include "GlobalMsg.h"
-#include "Enums.h"
+#include <TrackingState.h>
+#include <LogicController.h>
+#include <MathUtils.h>
+#include <GlobalMsg.h>
+#include <Enums.h>
 
 void TrackingState::enter() {
     GlobalMsg::Broadcast(PAGE_TRACKING);

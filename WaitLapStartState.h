@@ -1,10 +1,12 @@
-// WaitLapStartState.h
-#pragma once
-#include "BaseLogicState.h"
+#ifndef WaitLapStartState_H
+#define WaitLapStartState_H
+
+#include <BaseLogicState.h>
 
 class WaitLapStartState : public BaseLogicState {
 public:
-  using BaseLogicState::BaseLogicState;
+    using BaseLogicState::BaseLogicState;
     void enter() override;
     void loop(unsigned long dt) override;
 };
+#endif

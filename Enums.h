@@ -1,6 +1,6 @@
-#pragma once
-// --- UI ---
-// Пример PageId:
+#ifndef Enums_H
+#define Enums_H
+
 constexpr int PAGE_WAIT_GPS = 1;
 constexpr int PAGE_SPEEDOMETER = 2;
 constexpr int PAGE_WAIT_LAP = 3;
@@ -12,3 +12,4 @@ enum LogicStateId {
     LOGIC_TRACKING,
     LOGIC_SPEEDOMETER
 };
+#endif

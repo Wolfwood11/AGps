@@ -1,9 +1,9 @@
-#pragma once
+#ifndef Subscription_H
+#define Subscription_H
 
 #include <functional>
 #include <map>
 #include <memory>
-#include <utility>
 
 class SubscriptionHolder {
 public:
@@ -71,3 +71,4 @@ private:
     std::map<int, CallbackType> callbacks_;
     int currentId = 0;
 };
+#endif

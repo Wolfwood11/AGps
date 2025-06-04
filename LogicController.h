@@ -1,14 +1,11 @@
-#pragma once
+#ifndef LogicController_H
+#define LogicController_H
 
-#include "BtController.h"
-#include "DisplayController.h"
-#include "Enums.h"
-#include "GpsController.h"
-#include "IState.h"
-#include "MathUtils.h"
-#include "ObjectStateMachine.h"
-#include "Structs.h"
+#include <BtController.h>
+#include <Enums.h>
+#include <ObjectStateMachine.h>
 #include <Preferences.h>
+#include <Structs.h>
 #include <memory>
 
 // Стейты вперёд объявляем:
@@ -59,3 +56,4 @@ public:
     ObjectStateMachine<LogicStateId> stateMachine;
     int gpsDataUpdated;
 };
+#endif

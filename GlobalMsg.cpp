@@ -1,5 +1,5 @@
 // GlobalMsg.cpp
-#include "GlobalMsg.h"
+#include <GlobalMsg.h>
 
 static std::vector<GlobalMsg::Handler> g_handlers;
 

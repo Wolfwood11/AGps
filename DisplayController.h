@@ -1,10 +1,11 @@
-// DisplayController.h
-#pragma once
-#include "BaseController.h"
-#include "IUiPage.h"
+#ifndef DisplayController_H
+#define DisplayController_H
+
+#include <BaseController.h>
+#include <IUiPage.h>
 #include <U8g2lib.h>
-#include <memory>
 #include <map>
+#include <memory>
 
 class DisplayController : public BaseController {
 public:
@@ -24,3 +25,4 @@ private:
     std::map<int, std::shared_ptr<IUiPage>> pages;
     void onPageMsg(int pageId);
 };
+#endif

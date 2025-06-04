@@ -1,7 +1,9 @@
-#pragma once
+#ifndef BtController_H
+#define BtController_H
+
+#include <BaseController.h>
 #include <BluetoothSerial.h>
-#include "BaseController.h"
-#include "Subscription.h"
+#include <Subscription.h>
 
 class BtController : public BaseController {
 public:
@@ -14,6 +16,7 @@ public:
 
     void sendResponse(const String& msg);
     bool isConnected();
+
 private:
     BluetoothSerial btSerial;
     String buffer;
@@ -21,3 +24,4 @@ private:
 
     void sendNmeaLine(const String& line);
 };
+#endif

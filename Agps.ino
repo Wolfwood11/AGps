@@ -1,13 +1,11 @@
-#include "BtController.h"
-#include "DisplayController.h"
-#include "GpsController.h"
-#include "LogicController.h" // <-- Наш основной контроллер логики
-#include "MathUtils.h"
-#include "Subscription.h"
+#include <BtController.h>
+#include <DisplayController.h>
+#include <GpsController.h>
 #include <HardwareSerial.h>
 #include <Logger.h>
+#include <LogicController.h> // <-- Наш основной контроллер логики
 #include <Preferences.h>
-#include <TinyGPSPlus.h>
+#include <WiFiUdpController.h>
 #include <memory>
 
 #ifdef USE_GPS_HARDWARE
@@ -20,6 +18,7 @@ GpsController gpsController(Serial);
 #endif
 
 BtController btController(gpsController.nmeaRaw);
+WiFiUdpController wifiController(gpsController.nmeaRaw);
 Preferences prefs;
 
 U8G2_SH1106_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE);
@@ -35,6 +34,7 @@ void setup()
     // --- Настройка железа и сервисов ---
     gpsController.setup();
     btController.setup();
+    wifiController.setup();
     display.setup();
 
     // --- Логика ---
@@ -51,6 +51,7 @@ void loop()
     unsigned long now = millis();
     gpsController.loop(now);
     btController.loop(now);
+    wifiController.loop(now);
     logic->loop(now);
     display.loop(now); // UI всегда обновляется независимо от логики
 }

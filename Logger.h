@@ -1,4 +1,5 @@
-﻿#pragma once
+#ifndef Logger_H
+#define Logger_H
 
 #include <Arduino.h>
 #include <HardwareSerial.h>
@@ -49,3 +50,4 @@ private:
 
     HardwareSerial* serial_;
 };
+#endif

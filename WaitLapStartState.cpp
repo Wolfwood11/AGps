@@ -1,10 +1,10 @@
 // WaitLapStartState.cpp
-#include "WaitLapStartState.h"
-#include "Enums.h"
-#include "GlobalMsg.h"
-#include "Logger.h"
-#include "LogicController.h"
-#include "MathUtils.h"
+#include <WaitLapStartState.h>
+#include <Enums.h>
+#include <GlobalMsg.h>
+#include <Logger.h>
+#include <LogicController.h>
+#include <MathUtils.h>
 
 void WaitLapStartState::enter()
 {

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef Structs_H
+#define Structs_H
 
 #include <TinyGPSPlus.h>
 
@@ -60,17 +61,18 @@ struct FullNmeaTime {
 };
 
 struct GpsData {
-    double latitude;
-    double longitude;
-    double speedKmph;
-    double hdop;
-    int satellites;
-    bool locationValid;
-    bool speedValid;
-    bool hdopValid;
-    unsigned long msOfDay;
+    double latitude = 0.f;
+    double longitude = 0.f;
+    double speedKmph = 0.f;
+    double hdop = 0.f;
+    int satellites = 0;
+    bool locationValid = false;
+    bool speedValid = false;
+    bool hdopValid = false;
+    unsigned long msOfDay = 0;
 
     // Добавляемые поля:
-    unsigned long millisReceived;     // millis() во время получения фикса
-    FullNmeaTime nmeaTime;  
+    unsigned long millisReceived; // millis() во время получения фикса
+    FullNmeaTime nmeaTime;
 };
+#endif

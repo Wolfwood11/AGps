@@ -1,12 +1,12 @@
 // DisplayController.cpp
-#include "DisplayController.h"
-#include "DisplayFacade.h"
-#include "Enums.h"
-#include "GlobalMsg.h"
-#include "SpeedPage.h"
-#include "TrackingPage.h"
-#include "WaitGpsPage.h"
-#include "WaitLapStartPage.h"
+#include <DisplayController.h>
+#include <DisplayFacade.h>
+#include <Enums.h>
+#include <GlobalMsg.h>
+#include <SpeedPage.h>
+#include <TrackingPage.h>
+#include <WaitGpsPage.h>
+#include <WaitLapStartPage.h>
 
 DisplayController::DisplayController(U8G2& display)
     : u8g2(display)

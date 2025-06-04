@@ -1,10 +1,10 @@
-﻿// WaitGpsState.cpp
-#include "WaitGpsState.h"
-#include "Enums.h"
-#include "GlobalMsg.h"
-#include "Logger.h"
-#include "LogicController.h"
-#include "MathUtils.h"
+// WaitGpsState.cpp
+#include <WaitGpsState.h>
+#include <Enums.h>
+#include <GlobalMsg.h>
+#include <Logger.h>
+#include <LogicController.h>
+#include <MathUtils.h>
 
 void WaitGpsState::enter()
 {

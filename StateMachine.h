@@ -1,48 +1,44 @@
-#pragma once
+#ifndef StateMachine_H
+#define StateMachine_H
 
-#include <unordered_map>
-#include <queue>
 #include <functional>
+#include <queue>
+#include <unordered_map>
 
 template <typename EnumType>
-class StateMachine
-{
+class StateMachine {
 public:
     template <typename ObjectType>
-    void Bind(EnumType State, ObjectType* ObjectPtr, void (ObjectType::* FunctionPtr)(unsigned long), void (ObjectType::* EnterStateFunctionPtr)(unsigned long) = nullptr, void (ObjectType::* ExitStateFunctionPtr)(unsigned long) = nullptr)
+    void Bind(EnumType State, ObjectType* ObjectPtr, void (ObjectType::*FunctionPtr)(unsigned long), void (ObjectType::*EnterStateFunctionPtr)(unsigned long) = nullptr, void (ObjectType::*ExitStateFunctionPtr)(unsigned long) = nullptr)
     {
-        if (ObjectPtr && FunctionPtr)
-        {
+        if (ObjectPtr && FunctionPtr) {
             if (StateFunctionMap.empty()) {
                 DefaultState = State;
             }
 
             StateFunctionMap[State] = [ObjectPtr, FunctionPtr](unsigned long dt) {
                 (ObjectPtr->*FunctionPtr)(dt);
-                };
+            };
 
-            if (EnterStateFunctionPtr)
-            {
+            if (EnterStateFunctionPtr) {
                 EnterStateFunctionMap[State] = [ObjectPtr, EnterStateFunctionPtr](unsigned long dt) {
                     (ObjectPtr->*EnterStateFunctionPtr)(dt);
-                    };
+                };
             }
 
-            if (ExitStateFunctionPtr)
-            {
+            if (ExitStateFunctionPtr) {
                 ExitStateFunctionMap[State] = [ObjectPtr, ExitStateFunctionPtr](unsigned long dt) {
                     (ObjectPtr->*ExitStateFunctionPtr)(dt);
-                    };
+                };
             }
-        }
-        else
-        {
+        } else {
             // Handle error: Null pointer.
             Serial.println("Bind called with null ObjectPtr or FunctionPtr");
         }
     }
 
-    void SetState(EnumType State) {
+    void SetState(EnumType State)
+    {
         if (NextState != State) {
             NextState = State;
             StateChanged = true;
@@ -50,7 +46,8 @@ public:
         }
     }
 
-    void SetDefaultState(EnumType State) {
+    void SetDefaultState(EnumType State)
+    {
         if (StateFunctionMap.find(State) != StateFunctionMap.end()) {
             DefaultState = State;
         }
@@ -61,19 +58,20 @@ public:
         SetState(DefaultState);
     }
 
-    void ReturnToPreviousState() {
+    void ReturnToPreviousState()
+    {
         if (!PreviousStates.empty()) {
             NextState = PreviousStates.front();
             PreviousStates.pop();
             StateChanged = true;
             ExitStateCalled = false;
-        }
-        else {
+        } else {
             SetGoToDefaultState();
         }
     }
 
-    void UpdateState(unsigned long deltaTime) {
+    void UpdateState(unsigned long deltaTime)
+    {
         if (!Enabled) {
             return;
         }
@@ -136,3 +134,4 @@ private:
     bool StateChanged = false;
     bool ExitStateCalled = false;
 };
+#endif

@@ -1,8 +1,8 @@
 // SpeedometerState.cpp
-#include "SpeedometerState.h"
-#include "LogicController.h"
-#include "GlobalMsg.h"
-#include "Enums.h"
+#include <SpeedometerState.h>
+#include <LogicController.h>
+#include <GlobalMsg.h>
+#include <Enums.h>
 
 void SpeedometerState::enter() {
      GlobalMsg::Broadcast(PAGE_SPEEDOMETER);

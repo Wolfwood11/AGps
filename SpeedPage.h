@@ -1,7 +1,8 @@
-// SpeedPage.h
-#pragma once
-#include "IUiPage.h"
-#include "Binding.h"
+#ifndef SpeedPage_H
+#define SpeedPage_H
+
+#include <Binding.h>
+#include <IUiPage.h>
 
 class SpeedPage : public IUiPage {
 public:
@@ -9,7 +10,8 @@ public:
     Binding<int> satellites;
 
     SpeedPage() = default;
-    void render(U8G2& u8g2) override {
+    void render(U8G2& u8g2) override
+    {
         u8g2.setFont(u8g2_font_logisoso20_tf);
         u8g2.setCursor(0, 28);
         float speed = speedKmph;
@@ -18,6 +20,9 @@ public:
         else
             u8g2.print("--.- km/h");
         u8g2.setFont(u8g2_font_helvR08_tr);
-        u8g2.setCursor(0, 50); u8g2.print("SAT: "); u8g2.print((int)satellites);
+        u8g2.setCursor(0, 50);
+        u8g2.print("SAT: ");
+        u8g2.print((int)satellites);
     }
 };
+#endif

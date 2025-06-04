@@ -1,6 +1,8 @@
-#pragma once
-#include "IState.h"
-#include "Enums.h"
+#ifndef BaseLogicState_H
+#define BaseLogicState_H
+
+#include <Enums.h>
+#include <IState.h>
 
 class LogicController;
 
@@ -11,3 +13,4 @@ public:
 protected:
     LogicController* logic;
 };
+#endif

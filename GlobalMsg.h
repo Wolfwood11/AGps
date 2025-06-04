@@ -1,7 +1,7 @@
-// GlobalMsg.h
-#pragma once
+#ifndef GlobalMsg_H
+#define GlobalMsg_H
+
 #include <functional>
-#include <vector>
 
 class GlobalMsg {
 public:
@@ -10,3 +10,4 @@ public:
     static void Subscribe(Handler handler);
     static void Broadcast(int pageId);
 };
+#endif

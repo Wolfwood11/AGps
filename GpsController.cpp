@@ -1,5 +1,5 @@
-#include "GpsController.h"
-#include "MathUtils.h"
+#include <GpsController.h>
+#include <MathUtils.h>
 
 namespace {
     // Команды UBX для настройки GPS
