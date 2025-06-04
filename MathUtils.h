@@ -180,13 +180,7 @@ public:
         if (bearing_diff > 90.0)
             return false; // Пересечение не в ту сторону
 
-        // Дебаунсинг на основе millis() - предотвращает многократные срабатывания на одной линии
-        unsigned long now_millis_debounce = millis();
-        if (now_millis_debounce - lastCrossMillis < (minLapTimeMs / 4)) { // Уменьшил время дебаунсинга
-            // Serial.println("Debounced cross");
-            return false;
-        }
-        lastCrossMillis = now_millis_debounce;
+        // Проверка на пересечение выполнена и направление корректно
         return true;
     }
 };
