@@ -11,7 +11,7 @@ class GpsController : public BaseController {
 public:
     GpsController(HardwareSerial& serial, int rxPin = -1, int txPin = -1, int baud = 115200);
 
-    std::shared_ptr<Subscription<String>> nmeaRaw;
+    std::shared_ptr<Subscription<char>> nmeaRaw;
     std::shared_ptr<Subscription<GpsData>> gpsProcessed;
 
     void setup() override;

@@ -10,7 +10,7 @@
 
 class WiFiUdpController : public BaseController {
 public:
-    WiFiUdpController(std::shared_ptr<Subscription<String>> nmeaSource);
+    WiFiUdpController(std::shared_ptr<Subscription<char>> nmeaSource);
 
     void setup() override;
     void loop(unsigned long dt) override;
@@ -32,6 +32,7 @@ private:
     String apSsid;
     String apPassword = "12345678"; // можно не задавать
 
+    String nmeaBuffer;
     SubscriptionHolder nmeaHolder;
 };
 #endif

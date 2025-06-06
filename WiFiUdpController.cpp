@@ -1,15 +1,22 @@
 #include <WiFiUdpController.h>
 
-WiFiUdpController::WiFiUdpController(std::shared_ptr<Subscription<String>> nmeaSource)
+WiFiUdpController::WiFiUdpController(std::shared_ptr<Subscription<char>> nmeaSource)
 {
     if (nmeaSource) {
-        nmeaSource->Subscribe([this](const String& line) {
-            UdpGeoMessage msg;
-            msg.timestamp = millis();
-            strncpy(msg.nmea, line.c_str(), sizeof(msg.nmea) - 1);
-            msg.nmea[sizeof(msg.nmea) - 1] = 0; // защита от переполнения
+        nmeaSource->Subscribe([this](char c) {
+            if (c == '\n' || c == '\r') {
+                if (!nmeaBuffer.isEmpty()) {
+                    UdpGeoMessage msg;
+                    msg.timestamp = millis();
+                    strncpy(msg.nmea, nmeaBuffer.c_str(), sizeof(msg.nmea) - 1);
+                    msg.nmea[sizeof(msg.nmea) - 1] = 0; // защита от переполнения
 
-            this->SendMessage(msg, sizeof(msg));
+                    this->SendMessage(msg, sizeof(msg));
+                    nmeaBuffer = "";
+                }
+            } else if (nmeaBuffer.length() < sizeof(((UdpGeoMessage*)0)->nmea) - 1) {
+                nmeaBuffer += c;
+            }
         },
             nmeaHolder);
     }

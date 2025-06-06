@@ -20,7 +20,7 @@ namespace {
 GpsController::GpsController(HardwareSerial& serial, int rxPin, int txPin, int baud)
     : serial(serial), rxPin(rxPin), txPin(txPin), baudRate(baud)
 {
-    nmeaRaw = std::make_shared<Subscription<String>>();
+    nmeaRaw = std::make_shared<Subscription<char>>();
     gpsProcessed = std::make_shared<Subscription<GpsData>>();
 }
 
@@ -52,7 +52,7 @@ void GpsController::loop(unsigned long dt)
     while (serial.available()) {
         char c = serial.read();
         if (nmeaRaw) {
-            nmeaRaw->Broadcast(String(c)); // Отправляем каждый символ
+            nmeaRaw->Broadcast(c); // Отправляем каждый символ без лишних аллокаций
         }
         gps.encode(c);
     }
