@@ -2,11 +2,11 @@
 
 #include <DisplayFacade.h>
 
-BtController::BtController(std::shared_ptr<Subscription<String>> nmeaSource)
+BtController::BtController(std::shared_ptr<Subscription<char>> nmeaSource)
 {
     if (nmeaSource) {
-        nmeaSource->Subscribe([this](const String& line) {
-            this->sendNmeaLine(line);
+        nmeaSource->Subscribe([this](char c) {
+            this->sendNmeaChar(c);
         },
             nmeaHolder);
     }
@@ -49,9 +49,9 @@ void BtController::loop(unsigned long)
     display.setBtConnected(isConnected());
 }
 
-void BtController::sendNmeaLine(const String& line)
+void BtController::sendNmeaChar(char c)
 {
     if (btSerial.hasClient()) {
-        btSerial.print(line);
+        btSerial.write(c);
     }
 }

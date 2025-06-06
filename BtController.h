@@ -7,7 +7,7 @@
 
 class BtController : public BaseController {
 public:
-    BtController(std::shared_ptr<Subscription<String>> nmeaSource);
+    BtController(std::shared_ptr<Subscription<char>> nmeaSource);
 
     std::shared_ptr<Subscription<String>> command = std::make_shared<Subscription<String>>();
 
@@ -22,6 +22,6 @@ private:
     String buffer;
     SubscriptionHolder nmeaHolder;
 
-    void sendNmeaLine(const String& line);
+    void sendNmeaChar(char c);
 };
 #endif
